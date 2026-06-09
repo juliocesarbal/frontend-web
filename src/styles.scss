@@ -296,19 +296,14 @@ table {
   font-family: 'Fraunces', Georgia, serif !important;
 }
 
-/* Scrollbar cálida */
-::-webkit-scrollbar {
-  width: 11px;
-  height: 11px;
+/* Scrollbars invisibles (sigue scrolleando con rueda/trackpad/teclado/touch).
+   No se ocupa espacio ni se ve barra, pero el overflow scroll se conserva. */
+* {
+  scrollbar-width: none;          /* Firefox */
+  -ms-overflow-style: none;       /* IE / Edge legacy */
 }
-::-webkit-scrollbar-thumb {
-  background: #d3cabb;
-  border-radius: 8px;
-  border: 3px solid var(--paper);
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #c2b6a3;
-}
-::-webkit-scrollbar-track {
+*::-webkit-scrollbar {            /* Chrome / Edge / Safari */
+  width: 0;
+  height: 0;
   background: transparent;
 }

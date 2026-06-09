@@ -60,6 +60,14 @@ export interface RutaAnalizarIn {
   umbral_km?: number;
 }
 
+// Ruta de carretera calculada en el backend (fallback cuando OSRM browser falla).
+export interface RutaOsrm {
+  geometry: number[][]; // [[lat, lng], ...]
+  distancia_km: number;
+  duracion_min: number | null;
+  fuente: 'OSRM' | 'HAVERSINE';
+}
+
 // Cliente del análisis de ruta del MS3 (cruza ruta OSRM con zonas/incidentes/modelo).
 @Injectable({ providedIn: 'root' })
 export class Ms3RutaService {
@@ -68,5 +76,12 @@ export class Ms3RutaService {
 
   analizar(body: RutaAnalizarIn): Observable<RutaAnalisis> {
     return this.http.post<RutaAnalisis>(`${this.base}/ruta/analizar`, body);
+  }
+
+  // Geometría de carretera vía backend (server-to-server a OSRM, estable).
+  rutaOsrm(origenId: number, destinoId: number): Observable<RutaOsrm> {
+    return this.http.get<RutaOsrm>(`${this.base}/ruta/osrm`, {
+      params: { origen_id: origenId, destino_id: destinoId },
+    });
   }
 }

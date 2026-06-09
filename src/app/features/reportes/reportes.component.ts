@@ -6,6 +6,7 @@ import { Ms3ReportesService, ReporteOperacion } from '../../services/ms3-reporte
 import { DonutChartComponent, LineChartComponent, DatoChart } from '../../shared/charts';
 import { ReportShellComponent } from '../../shared/report-shell.component';
 import { ReporteExport } from '../../shared/report-export.service';
+import { FiltrosReporte, ReportFiltersComponent } from '../../shared/report-filters.component';
 
 interface ResumenMs1 {
   totalIngresos: number;
@@ -16,8 +17,8 @@ interface ResumenMs1 {
 }
 
 const RESUMEN = gql`
-  query ResumenBI {
-    reportes {
+  query ResumenBI($desde: String, $hasta: String) {
+    reportes(desde: $desde, hasta: $hasta) {
       totalIngresos
       cantidadIngresos
       ticketPromedio
@@ -31,9 +32,10 @@ const RESUMEN = gql`
 @Component({
   selector: 'app-reportes',
   standalone: true,
-  imports: [CommonModule, DecimalPipe, RouterLink, DonutChartComponent, LineChartComponent, ReportShellComponent],
+  imports: [CommonModule, DecimalPipe, RouterLink, DonutChartComponent, LineChartComponent, ReportShellComponent, ReportFiltersComponent],
   template: `
     <app-report-shell titulo="Resumen general" subtitulo="Vista ejecutiva del courier · empresa (MS1) + operación (MS3)" [build]="build">
+      <app-report-filters [dims]="['tiempo','dia','servicio','riesgo','sucursal']" (cambio)="aplicar($event)"></app-report-filters>
       <div class="kpis">
         @if (ms1(); as m) {
           <div class="kpi"><span class="v">Bs {{ m.totalIngresos | number: '1.0-0' }}</span><span class="l">Ingresos totales</span></div>
@@ -60,10 +62,10 @@ const RESUMEN = gql`
 
       <h3 class="sec">Explorar reportes</h3>
       <div class="links">
-        <a class="link" routerLink="/reportes/ingresos"><span class="ic">💰</span><b>Ingresos y facturación</b><span>Resultados empresariales (MS1)</span></a>
-        <a class="link" routerLink="/reportes/operacion"><span class="ic">🚚</span><b>Envíos y operación</b><span>Indicadores logísticos (MS3)</span></a>
-        <a class="link" routerLink="/reportes/zonas"><span class="ic">🗺️</span><b>Zonas e incidentes</b><span>Clasificación y eventos (MS3)</span></a>
-        <a class="link" routerLink="/reportes/rankings"><span class="ic">🏆</span><b>Rankings y tops</b><span>Mayores clientes, servicios… (MS3)</span></a>
+        <a class="link" routerLink="/reportes/ingresos"><b>Ingresos y facturación</b><span>Resultados empresariales (MS1)</span></a>
+        <a class="link" routerLink="/reportes/operacion"><b>Envíos y operación</b><span>Indicadores logísticos (MS3)</span></a>
+        <a class="link" routerLink="/reportes/zonas"><b>Zonas e incidentes</b><span>Clasificación y eventos (MS3)</span></a>
+        <a class="link" routerLink="/reportes/rankings"><b>Rankings y tops</b><span>Mayores clientes, servicios… (MS3)</span></a>
       </div>
     </app-report-shell>
   `,
@@ -80,8 +82,7 @@ const RESUMEN = gql`
     .links { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
     .link { display: flex; flex-direction: column; gap: 2px; text-decoration: none; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; transition: border-color .2s, transform .2s; }
     .link:hover { border-color: var(--accent); transform: translateY(-2px); }
-    .link .ic { font-size: 22px; }
-    .link b { color: var(--ink); font-size: 14.5px; margin-top: 4px; }
+    .link b { color: var(--ink); font-size: 14.5px; }
     .link span:last-child { color: var(--muted); font-size: 12.5px; }
     @media (max-width: 780px) { .grid { grid-template-columns: 1fr; } }
   `],
@@ -91,10 +92,27 @@ export class ReportesComponent {
   private ms3 = inject(Ms3ReportesService);
   ms1 = signal<ResumenMs1 | null>(null);
   ops = signal<ReporteOperacion | null>(null);
+  private filtros: FiltrosReporte = {};
 
   constructor() {
-    this.apollo.query<{ reportes: ResumenMs1 }>({ query: RESUMEN }).subscribe((r) => this.ms1.set(r.data?.reportes ?? null));
-    this.ms3.operacion().subscribe((o) => this.ops.set(o));
+    this.cargar();
+  }
+
+  private cargar() {
+    // MS1 solo filtra por fechas (desde/hasta como fecha); MS3 honra todos los filtros.
+    this.apollo
+      .query<{ reportes: ResumenMs1 }>({
+        query: RESUMEN,
+        variables: { desde: this.filtros.desde || null, hasta: this.filtros.hasta || null },
+        fetchPolicy: 'network-only',
+      })
+      .subscribe((r) => this.ms1.set(r.data?.reportes ?? null));
+    this.ms3.operacion(this.filtros).subscribe((o) => this.ops.set(o));
+  }
+
+  aplicar(f: FiltrosReporte) {
+    this.filtros = f;
+    this.cargar();
   }
 
   serieMs1 = computed<DatoChart[]>(() => (this.ms1()?.ingresosPorMes ?? []).map((x) => ({ label: x.clave, value: x.valor })));

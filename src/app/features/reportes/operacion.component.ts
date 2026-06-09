@@ -4,14 +4,16 @@ import { Ms3ReportesService, ReporteOperacion } from '../../services/ms3-reporte
 import { BarChartComponent, DonutChartComponent, LineChartComponent, DatoChart } from '../../shared/charts';
 import { ReportShellComponent } from '../../shared/report-shell.component';
 import { ReporteExport } from '../../shared/report-export.service';
+import { FiltrosReporte, ReportFiltersComponent } from '../../shared/report-filters.component';
 
 // Hoja BI: Envíos / Operación (datos del MS3).
 @Component({
   selector: 'app-reportes-operacion',
   standalone: true,
-  imports: [CommonModule, DecimalPipe, BarChartComponent, DonutChartComponent, LineChartComponent, ReportShellComponent],
+  imports: [CommonModule, DecimalPipe, BarChartComponent, DonutChartComponent, LineChartComponent, ReportShellComponent, ReportFiltersComponent],
   template: `
     <app-report-shell titulo="Envíos y operación" subtitulo="Indicadores logísticos del courier (MS3)" [build]="build">
+      <app-report-filters (cambio)="aplicar($event)"></app-report-filters>
       @if (rep(); as r) {
         <div class="kpis">
           <div class="kpi"><span class="v">{{ r.total_envios | number }}</span><span class="l">Envíos totales</span></div>
@@ -37,6 +39,41 @@ import { ReporteExport } from '../../shared/report-export.service';
             <h3>Envíos por zona</h3>
             <app-bar-chart [data]="zona()"></app-bar-chart>
           </section>
+
+          <section class="panel wide">
+            <h3>Detalle por servicio y riesgo</h3>
+            <div class="dos-tablas">
+              <table class="tbl">
+                <thead><tr><th>Servicio</th><th class="r">Envíos</th><th class="r">%</th></tr></thead>
+                <tbody>
+                  @for (f of servicio(); track f.label) {
+                    <tr><td>{{ f.label }}</td><td class="r">{{ f.value | number }}</td><td class="r">{{ porc(f.value, totalServicio()) }}%</td></tr>
+                  }
+                </tbody>
+              </table>
+              <table class="tbl">
+                <thead><tr><th>Riesgo</th><th class="r">Envíos</th><th class="r">%</th></tr></thead>
+                <tbody>
+                  @for (f of riesgo(); track f.label) {
+                    <tr><td>{{ f.label }}</td><td class="r">{{ f.value | number }}</td><td class="r">{{ porc(f.value, totalRiesgo()) }}%</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section class="panel wide">
+            <h3>Evolución mensual de envíos (detalle)</h3>
+            <table class="tbl">
+              <thead><tr><th>Mes</th><th class="r">Envíos</th></tr></thead>
+              <tbody>
+                @for (m of mes(); track m.label) {
+                  <tr><td>{{ m.label }}</td><td class="r">{{ m.value | number }}</td></tr>
+                }
+                @if (!mes().length) { <tr><td colspan="2" class="vacio">Sin datos para los filtros.</td></tr> }
+              </tbody>
+            </table>
+          </section>
         </div>
       } @else {
         <p class="vacio">Cargando datos de operación…</p>
@@ -54,15 +91,30 @@ import { ReporteExport } from '../../shared/report-export.service';
     .panel.wide { grid-column: 1 / -1; }
     .panel h3 { font-size: 15px; font-weight: 700; color: var(--ink); margin: 0 0 14px; }
     .vacio { color: var(--muted); }
-    @media (max-width: 780px) { .grid { grid-template-columns: 1fr; } }
+    .dos-tablas { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .tbl th, .tbl td { border-bottom: 1px solid var(--line); padding: 8px 10px; text-align: left; }
+    .tbl th { color: var(--muted); font-weight: 700; }
+    .tbl .r { text-align: right; }
+    @media (max-width: 780px) { .grid { grid-template-columns: 1fr; } .dos-tablas { grid-template-columns: 1fr; } }
   `],
 })
 export class ReportesOperacionComponent {
   private api = inject(Ms3ReportesService);
   rep = signal<ReporteOperacion | null>(null);
+  private filtros: FiltrosReporte = {};
 
   constructor() {
-    this.api.operacion().subscribe((r) => this.rep.set(r));
+    this.cargar();
+  }
+
+  private cargar() {
+    this.api.operacion(this.filtros).subscribe((r) => this.rep.set(r));
+  }
+
+  aplicar(f: FiltrosReporte) {
+    this.filtros = f;
+    this.cargar();
   }
 
   private pares(rec?: Record<string, number>): DatoChart[] {
@@ -72,6 +124,12 @@ export class ReportesOperacionComponent {
   riesgo = computed(() => this.pares(this.rep()?.por_riesgo));
   zona = computed(() => this.pares(this.rep()?.por_zona));
   mes = computed(() => Object.entries(this.rep()?.por_mes ?? {}).sort((a, b) => a[0].localeCompare(b[0])).map(([label, value]) => ({ label, value })));
+
+  totalServicio = computed(() => this.servicio().reduce((a, d) => a + d.value, 0));
+  totalRiesgo = computed(() => this.riesgo().reduce((a, d) => a + d.value, 0));
+  porc(v: number, total: number): string {
+    return total ? ((v / total) * 100).toFixed(1) : '0';
+  }
 
   build = (): ReporteExport => {
     const r = this.rep();

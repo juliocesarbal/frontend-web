@@ -1,6 +1,7 @@
 import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, inject, signal } from '@angular/core';
 import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 import * as L from 'leaflet';
 import { Ms3DatasetsService, Sucursal } from '../../services/ms3-datasets.service';
 import { Ms3RutaService, RutaAnalisis } from '../../services/ms3-ruta.service';
@@ -79,6 +80,9 @@ const COLOR_RIESGO: Record<string, string> = { ALTO: '#a13b2f', MEDIO: '#b45309'
           @if (analisis(); as a) {
             <div class="result">
               <div class="badge" [style.background]="colorRiesgo(a.riesgo)">Riesgo {{ a.riesgo }}</div>
+              @if (fuenteRuta() === 'HAVERSINE') {
+                <p class="aviso">⚠ Ruta aproximada (línea recta): OSRM no respondió. La distancia y el ETA son estimados, no el camino real.</p>
+              }
               <p class="resumen">{{ a.resumen }}</p>
               <div class="kpis">
                 <div><b>{{ a.distancia_km | number: '1.0-0' }}</b><span>km carretera</span></div>
@@ -135,6 +139,7 @@ const COLOR_RIESGO: Record<string, string> = { ALTO: '#a13b2f', MEDIO: '#b45309'
     .btn:disabled { opacity: .55; cursor: default; }
     .err { color: #a13b2f; font-size: 13px; margin-top: 10px; }
     .result { margin-top: 18px; border-top: 1px solid var(--line); padding-top: 14px; }
+    .aviso { background: #fbf0d9; border: 1px solid #e3c77a; color: #7a5b12; font-size: 12px; line-height: 1.4; padding: 8px 11px; border-radius: 9px; margin: 10px 0 0; }
     .badge { display: inline-block; color: #fff; font-weight: 700; font-size: 12px; padding: 4px 12px; border-radius: 20px; }
     .resumen { font-size: 13px; color: var(--ink-2); margin: 10px 0 14px; line-height: 1.4; }
     .kpis { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
@@ -173,6 +178,7 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
   cargando = signal(false);
   error = signal('');
   analisis = signal<RutaAnalisis | null>(null);
+  fuenteRuta = signal<'OSRM' | 'HAVERSINE'>('OSRM'); // de dónde salió la geometría dibujada
 
   private map?: L.Map;
   private capa?: L.LayerGroup;
@@ -220,10 +226,15 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
     const o = this.sucursales().find((s) => s.id === this.origenId)!;
     const d = this.sucursales().find((s) => s.id === this.destinoId)!;
 
-    // 1) Ruta recomendada de OSRM (browser). Si falla, línea recta.
+    // 1) Ruta recomendada de carretera. Cadena de fallback:
+    //    a) OSRM directo desde el navegador (rápido)
+    //    b) si falla, OSRM vía backend (server-to-server, estable)
+    //    c) si también falla, línea recta (queda marcado como aproximado)
     let geometry: number[][] = [[o.gps_lat, o.gps_lng], [d.gps_lat, d.gps_lng]];
     let distKm: number | undefined;
     let durMin: number | undefined;
+    let fuente: 'OSRM' | 'HAVERSINE' = 'HAVERSINE';
+
     try {
       const url = `https://router.project-osrm.org/route/v1/driving/${o.gps_lng},${o.gps_lat};${d.gps_lng},${d.gps_lat}?overview=full&geometries=geojson`;
       const res = await fetch(url);
@@ -233,10 +244,27 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
         geometry = r.geometry.coordinates.map((c: number[]) => [c[1], c[0]]); // [lng,lat]->[lat,lng]
         distKm = r.distance / 1000;
         durMin = r.duration / 60;
+        fuente = 'OSRM';
       }
     } catch {
-      /* sin internet OSRM: usamos línea recta y distancia del backend (ruta_cache) */
+      /* OSRM browser falló (throttle/CORS/red): probamos el backend abajo */
     }
+
+    // b) Fallback: el backend pide la ruta a OSRM (no sufre el throttle del browser).
+    if (fuente !== 'OSRM') {
+      try {
+        const bk = await firstValueFrom(this.rutaSvc.rutaOsrm(this.origenId, this.destinoId));
+        if (bk.geometry?.length >= 2) {
+          geometry = bk.geometry;
+          distKm = bk.distancia_km;
+          durMin = bk.duracion_min ?? undefined;
+          fuente = bk.fuente; // 'OSRM' si el backend la consiguió, si no 'HAVERSINE'
+        }
+      } catch {
+        /* backend tampoco: queda la línea recta marcada como aproximada */
+      }
+    }
+    this.fuenteRuta.set(fuente);
 
     // 2) Análisis en el backend (zonas, incidentes, modelo, retraso).
     this.rutaSvc
@@ -270,8 +298,15 @@ export class MapaComponent implements AfterViewInit, OnDestroy {
     this.capa.clearLayers();
     const latlngs = geometry.map((p) => L.latLng(p[0], p[1]));
 
-    // Ruta
-    L.polyline(latlngs, { color: this.colorRiesgo(a.riesgo), weight: 5, opacity: 0.85 }).addTo(this.capa);
+    // Ruta. Si la geometría es real (OSRM) -> línea sólida; si es la recta de
+    // respaldo (HAVERSINE) -> punteada y atenuada para que se note que es aprox.
+    const aprox = this.fuenteRuta() === 'HAVERSINE';
+    L.polyline(latlngs, {
+      color: this.colorRiesgo(a.riesgo),
+      weight: aprox ? 3 : 5,
+      opacity: aprox ? 0.6 : 0.85,
+      dashArray: aprox ? '8, 10' : undefined,
+    }).addTo(this.capa);
 
     // Origen / destino (divIcon con estilo inline -> sin assets ni encapsulación)
     const pin = (txt: string, bg: string) =>

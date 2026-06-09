@@ -4,6 +4,7 @@ import { Apollo, gql } from 'apollo-angular';
 import { BarChartComponent, DonutChartComponent, LineChartComponent, DatoChart } from '../../shared/charts';
 import { ReportShellComponent } from '../../shared/report-shell.component';
 import { ReporteExport } from '../../shared/report-export.service';
+import { FiltrosReporte, ReportFiltersComponent } from '../../shared/report-filters.component';
 
 interface ParValor { clave: string; valor: number; }
 interface Reporte {
@@ -19,8 +20,8 @@ interface Reporte {
 }
 
 const REPORTES = gql`
-  query Reportes {
-    reportes {
+  query Reportes($desde: String, $hasta: String) {
+    reportes(desde: $desde, hasta: $hasta) {
       totalIngresos
       cantidadIngresos
       ticketPromedio
@@ -38,9 +39,10 @@ const REPORTES = gql`
 @Component({
   selector: 'app-reportes-ingresos',
   standalone: true,
-  imports: [CommonModule, DecimalPipe, BarChartComponent, DonutChartComponent, LineChartComponent, ReportShellComponent],
+  imports: [CommonModule, DecimalPipe, BarChartComponent, DonutChartComponent, LineChartComponent, ReportShellComponent, ReportFiltersComponent],
   template: `
     <app-report-shell titulo="Ingresos y facturación" subtitulo="Resultados empresariales del courier (MS1)" [build]="build">
+      <app-report-filters [dims]="['tiempo']" (cambio)="aplicar($event)"></app-report-filters>
       @if (rep(); as r) {
         <div class="kpis">
           <div class="kpi"><span class="v">Bs {{ r.totalIngresos | number: '1.0-0' }}</span><span class="l">Ingresos totales</span></div>
@@ -101,9 +103,25 @@ const REPORTES = gql`
 export class ReportesIngresosComponent {
   private apollo = inject(Apollo);
   rep = signal<Reporte | null>(null);
+  private filtros: FiltrosReporte = {};
 
   constructor() {
-    this.apollo.query<{ reportes: Reporte }>({ query: REPORTES }).subscribe((res) => this.rep.set(res.data?.reportes ?? null));
+    this.cargar();
+  }
+
+  private cargar() {
+    this.apollo
+      .query<{ reportes: Reporte }>({
+        query: REPORTES,
+        variables: { desde: this.filtros.desde || null, hasta: this.filtros.hasta || null },
+        fetchPolicy: 'network-only',
+      })
+      .subscribe((res) => this.rep.set(res.data?.reportes ?? null));
+  }
+
+  aplicar(f: FiltrosReporte) {
+    this.filtros = f;
+    this.cargar();
   }
 
   private d(p?: ParValor[]): DatoChart[] { return (p ?? []).map((x) => ({ label: x.clave, value: x.valor })); }

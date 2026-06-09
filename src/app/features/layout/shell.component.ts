@@ -6,7 +6,9 @@ import { MatSidenavModule } from '@angular/material/sidenav';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { AuthService } from '../../core/auth/auth.service';
+import { PerfilDialog } from './perfil.dialog';
 
 interface SubItem {
   label: string;
@@ -33,6 +35,7 @@ interface NavItem {
     MatIconModule,
     MatButtonModule,
     MatMenuModule,
+    MatDialogModule,
   ],
   template: `
     <mat-toolbar class="topbar">
@@ -42,16 +45,28 @@ interface NavItem {
         <span class="brand-txt">Courier <b>Inteligente</b></span>
       </div>
       <span class="spacer"></span>
-      <button mat-button class="user-btn" [matMenuTriggerFor]="menu">
+      <button type="button" class="user-btn" [matMenuTriggerFor]="menu" aria-label="Cuenta">
         <span class="avatar">{{ iniciales }}</span>
         <span class="user-meta">
-          <span class="user-name">{{ auth.nombre }}</span>
-          <span class="user-rol">{{ auth.rol }}</span>
+          <span class="user-name">{{ auth.nombre || 'Usuario' }}</span>
+          <span class="user-rol">{{ rolLabel }}</span>
         </span>
-        <mat-icon>expand_more</mat-icon>
+        <mat-icon class="caret">expand_more</mat-icon>
       </button>
-      <mat-menu #menu="matMenu">
-        <button mat-menu-item (click)="auth.logout()"><mat-icon>logout</mat-icon> Cerrar sesión</button>
+      <mat-menu #menu="matMenu" class="cuenta-menu" xPosition="before">
+        <div class="menu-head" (click)="$event.stopPropagation()">
+          <span class="avatar sm">{{ iniciales }}</span>
+          <div class="mh-txt">
+            <b>{{ auth.nombre || 'Usuario' }}</b>
+            <span>{{ auth.email || rolLabel }}</span>
+          </div>
+        </div>
+        <button mat-menu-item (click)="abrirPerfil()">
+          <mat-icon>account_circle</mat-icon> Perfil
+        </button>
+        <button mat-menu-item (click)="auth.logout()">
+          <mat-icon>logout</mat-icon> Cerrar sesión
+        </button>
       </mat-menu>
     </mat-toolbar>
 
@@ -135,21 +150,29 @@ interface NavItem {
         display: flex;
         align-items: center;
         gap: 11px;
-        height: auto;
-        min-height: 52px;
-        padding: 6px 14px 6px 8px;
-        border-radius: 12px;
-        line-height: 1;
+        height: 48px;
+        padding: 0 10px 0 6px;
+        border: 1px solid rgba(244, 241, 234, 0.16);
+        background: rgba(244, 241, 234, 0.06);
+        border-radius: 999px;
+        cursor: pointer;
+        font: inherit;
+        transition: background 0.15s ease, border-color 0.15s ease;
+      }
+      .user-btn:hover {
+        background: rgba(244, 241, 234, 0.13);
+        border-color: rgba(244, 241, 234, 0.3);
       }
       .avatar {
         width: 36px;
         height: 36px;
         border-radius: 50%;
-        background: rgba(244, 241, 234, 0.18);
+        background: var(--accent);
+        color: #fff;
         display: grid;
         place-items: center;
         font-weight: 700;
-        font-size: 13px;
+        font-size: 14px;
         flex: none;
       }
       .user-meta {
@@ -157,18 +180,37 @@ interface NavItem {
         flex-direction: column;
         align-items: flex-start;
         justify-content: center;
-        gap: 3px;
-        line-height: 1.2;
-        margin-right: 2px;
+        gap: 1px;
+        line-height: 1.15;
       }
       .user-name {
         font-size: 13.5px;
         font-weight: 600;
+        color: #f4f1ea;
+        white-space: nowrap;
       }
       .user-rol {
         font-size: 11px;
-        opacity: 0.72;
-        text-transform: capitalize;
+        color: rgba(244, 241, 234, 0.66);
+        white-space: nowrap;
+      }
+      .user-btn .caret {
+        font-size: 20px;
+        height: 20px;
+        width: 20px;
+        color: rgba(244, 241, 234, 0.66);
+      }
+      @media (max-width: 560px) {
+        .user-meta,
+        .user-btn .caret {
+          display: none;
+        }
+        .user-btn {
+          padding: 0;
+          border-radius: 50%;
+          width: 44px;
+          justify-content: center;
+        }
       }
       .container {
         height: calc(100vh - 64px);
@@ -280,14 +322,56 @@ interface NavItem {
       .content {
         background: var(--paper);
       }
+      /* Cabecera del menú de cuenta (overlay -> ::ng-deep). */
+      ::ng-deep .cuenta-menu .menu-head {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--line);
+        cursor: default;
+      }
+      ::ng-deep .cuenta-menu .menu-head .avatar.sm {
+        width: 38px;
+        height: 38px;
+        font-size: 14px;
+      }
+      ::ng-deep .cuenta-menu .mh-txt {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.25;
+        min-width: 0;
+      }
+      ::ng-deep .cuenta-menu .mh-txt b {
+        font-size: 14px;
+        color: var(--ink);
+      }
+      ::ng-deep .cuenta-menu .mh-txt span {
+        font-size: 12px;
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 200px;
+      }
     `,
   ],
 })
 export class ShellComponent {
   auth = inject(AuthService);
   private router = inject(Router);
+  private dialog = inject(MatDialog);
 
   openGroup = signal<string | null>(null);
+
+  get rolLabel(): string {
+    const r = (this.auth.rol ?? '').toUpperCase();
+    return { ADMIN: 'Administrador', CLIENTE: 'Cliente', ASESOR: 'Asesor' }[r] ?? r ?? '';
+  }
+
+  abrirPerfil() {
+    this.dialog.open(PerfilDialog, { autoFocus: false, width: '440px' });
+  }
 
   constructor() {
     // Si entramos directo a una sección con submenú, dejarla abierta.
@@ -324,6 +408,7 @@ export class ShellComponent {
     { label: 'Calcular tarifa', icon: 'request_quote', path: '/tarifas' },
     { label: 'Encomiendas', icon: 'local_shipping', path: '/encomiendas' },
     { label: 'Documentos', icon: 'description', path: '/documentos' },
+    { label: 'Auditoría', icon: 'history', path: '/auditoria', soloAdmin: true },
     {
       label: 'Inteligencia',
       icon: 'psychology',
