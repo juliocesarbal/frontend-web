@@ -306,6 +306,16 @@ export class EncomiendasComponent {
         this.cambiando.set(false);
         this.cargar();
         this.refrescarTraza(act.tracking_code);
+        // El evento CAMBIO_ESTADO se mina en background (~15s); reconsulta los
+        // eventos para que aparezca el enlace a Etherscan sin reabrir el panel.
+        setTimeout(() => {
+          if (this.seleccionada()?.tracking_code === act.tracking_code) {
+            this.ms3.eventosBlockchain(act.tracking_code).subscribe({
+              next: (ev) => this.eventos.set(ev ?? []),
+              error: () => {},
+            });
+          }
+        }, 20000);
       },
       error: (err) => {
         this.snack.open(this.err(err, 'No se pudo cambiar el estado'), 'Cerrar', { duration: 4000 });
