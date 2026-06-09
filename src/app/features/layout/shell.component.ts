@@ -345,10 +345,10 @@ export class ShellComponent {
       soloAdmin: true,
       children: [
         { label: 'Resumen general', path: '/reportes' },
-        { label: 'Ingresos (MS1)', path: '/reportes/ingresos' },
-        { label: 'Envíos / Operación (MS3)', path: '/reportes/operacion' },
-        { label: 'Zonas e incidentes (MS3)', path: '/reportes/zonas' },
-        { label: 'Rankings y tops (MS3)', path: '/reportes/rankings' },
+        { label: 'Ingresos', path: '/reportes/ingresos' },
+        { label: 'Envíos / Operación', path: '/reportes/operacion' },
+        { label: 'Zonas e incidentes', path: '/reportes/zonas' },
+        { label: 'Rankings y tops', path: '/reportes/rankings' },
       ],
     },
   ];

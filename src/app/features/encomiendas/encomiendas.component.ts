@@ -10,6 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatPaginatorModule, PageEvent } from '@angular/material/paginator';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import {
   Encomienda,
@@ -50,6 +51,7 @@ const TRANSICIONES: Record<string, string[]> = {
     MatButtonModule,
     MatIconModule,
     MatProgressBarModule,
+    MatPaginatorModule,
     MatSnackBarModule,
   ],
   template: `
@@ -66,7 +68,10 @@ const TRANSICIONES: Record<string, string[]> = {
 
       <mat-card>
         @if (cargando()) { <mat-progress-bar mode="indeterminate"></mat-progress-bar> }
-        <table mat-table [dataSource]="encomiendas()">
+        @if (encomiendas().length > 0) {
+          <div class="tabla-info">{{ encomiendas().length }} encomiendas</div>
+        }
+        <table mat-table [dataSource]="pageData()">
           <ng-container matColumnDef="tracking">
             <th mat-header-cell *matHeaderCellDef>Tracking</th>
             <td mat-cell *matCellDef="let e"><b>{{ e.tracking_code }}</b></td>
@@ -78,6 +83,12 @@ const TRANSICIONES: Record<string, string[]> = {
           <ng-container matColumnDef="destino">
             <th mat-header-cell *matHeaderCellDef>Destino</th>
             <td mat-cell *matCellDef="let e">{{ e.destino || '—' }}</td>
+          </ng-container>
+          <ng-container matColumnDef="costo">
+            <th mat-header-cell *matHeaderCellDef>Costo</th>
+            <td mat-cell *matCellDef="let e">
+              {{ e.costo != null ? ('Bs ' + (e.costo | number: '1.2-2')) : '—' }}
+            </td>
           </ng-container>
           <ng-container matColumnDef="estado">
             <th mat-header-cell *matHeaderCellDef>Estado</th>
@@ -96,6 +107,16 @@ const TRANSICIONES: Record<string, string[]> = {
           <tr mat-header-row *matHeaderRowDef="cols"></tr>
           <tr mat-row *matRowDef="let row; columns: cols"></tr>
         </table>
+        @if (encomiendas().length > pageSize()) {
+          <mat-paginator
+            [length]="encomiendas().length"
+            [pageSize]="pageSize()"
+            [pageIndex]="pageIndex()"
+            [pageSizeOptions]="[10, 25, 50, 100]"
+            (page)="onPage($event)"
+            showFirstLastButtons
+          ></mat-paginator>
+        }
         @if (!cargando() && encomiendas().length === 0) {
           <div class="empty">
             <mat-icon>inbox</mat-icon>
@@ -169,6 +190,7 @@ const TRANSICIONES: Record<string, string[]> = {
   `,
   styles: [
     `
+      .tabla-info { padding: 8px 4px; color: var(--muted); font-size: 13px; }
       .traza { margin-top: 16px; padding: 16px; }
       .traza-head { display: flex; align-items: center; justify-content: space-between; }
       .traza-head h3 { display: flex; align-items: center; gap: 8px; margin: 0; }
@@ -189,7 +211,7 @@ export class EncomiendasComponent {
   private dialog = inject(MatDialog);
   private snack = inject(MatSnackBar);
 
-  cols = ['tracking', 'cliente', 'destino', 'estado', 'acciones'];
+  cols = ['tracking', 'cliente', 'destino', 'costo', 'estado', 'acciones'];
   etherscan = ETHERSCAN_TX;
 
   encomiendas = signal<Encomienda[]>([]);
@@ -198,6 +220,16 @@ export class EncomiendasComponent {
   eventos = signal<EventoBlockchain[]>([]);
   cargando = signal(false);
   cambiando = signal(false);
+
+  // Paginación client-side: la lista completa vive en `encomiendas`, la tabla
+  // muestra solo la página actual (`pageData`).
+  pageIndex = signal(0);
+  pageSize = signal(10);
+  pageData = computed(() => {
+    const all = this.encomiendas();
+    const start = this.pageIndex() * this.pageSize();
+    return all.slice(start, start + this.pageSize());
+  });
 
   estadosPermitidos = computed(() => {
     const e = this.seleccionada();
@@ -216,6 +248,7 @@ export class EncomiendasComponent {
     this.ms3.listar().subscribe({
       next: (l) => {
         this.encomiendas.set(l ?? []);
+        this.pageIndex.set(0);
         this.cargando.set(false);
       },
       error: (e) => {
@@ -248,6 +281,11 @@ export class EncomiendasComponent {
 
   cerrarTraza() {
     this.seleccionada.set(null);
+  }
+
+  onPage(e: PageEvent) {
+    this.pageIndex.set(e.pageIndex);
+    this.pageSize.set(e.pageSize);
   }
 
   private refrescarTraza(trk: string) {

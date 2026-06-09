@@ -14,6 +14,9 @@ export interface Encomienda {
   peso?: number;
   servicio_ref?: string;
   zona_ref?: string;
+  sucursal_origen_id?: number;
+  sucursal_destino_id?: number;
+  distancia?: number;
   estado: string;
   costo?: number;
   riesgo_retraso?: string;

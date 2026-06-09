@@ -113,13 +113,15 @@ const ORDEN_GRUPO = ['ALTA_DEMANDA', 'RETRASOS_FRECUENTES', 'BAJA_DEMANDA'];
       .track { height: 9px; background: var(--surface-2); border-radius: 6px; overflow: hidden; }
       .fill { height: 100%; border-radius: 6px; background: var(--ink); }
       .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); }
-      .g-ALTA_DEMANDA { background: var(--ok) !important; }
-      .g-RETRASOS_FRECUENTES { background: var(--bad) !important; }
-      .g-BAJA_DEMANDA { background: var(--muted) !important; }
-      .chip { display: inline-flex; padding: 4px 11px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-      .chip.g-ALTA_DEMANDA { background: rgba(77,124,74,.16); color: var(--ok); }
-      .chip.g-RETRASOS_FRECUENTES { background: rgba(161,59,47,.14); color: var(--bad); }
-      .chip.g-BAJA_DEMANDA { background: var(--surface-2); color: var(--ink-2); }
+      /* Colores SÓLIDOS solo para los indicadores (dot/fill de las barras), NO el chip. */
+      .dot.g-ALTA_DEMANDA, .fill.g-ALTA_DEMANDA { background: var(--ok); }
+      .dot.g-RETRASOS_FRECUENTES, .fill.g-RETRASOS_FRECUENTES { background: var(--bad); }
+      .dot.g-BAJA_DEMANDA, .fill.g-BAJA_DEMANDA { background: var(--muted); }
+      /* Chip del grupo: fondo tintado de color + texto NEGRO para que se lea. */
+      .chip { display: inline-flex; padding: 4px 11px; border-radius: 999px; font-size: 12px; font-weight: 700; color: var(--ink); }
+      .chip.g-ALTA_DEMANDA { background: rgba(77,124,74,.16); }
+      .chip.g-RETRASOS_FRECUENTES { background: rgba(161,59,47,.14); }
+      .chip.g-BAJA_DEMANDA { background: var(--surface-2); }
       .muted { color: var(--muted); }
       .mini { font-size: 16px; height: 16px; width: 16px; vertical-align: middle; }
       .vacio { padding: 36px 12px; text-align: center; color: var(--muted); }

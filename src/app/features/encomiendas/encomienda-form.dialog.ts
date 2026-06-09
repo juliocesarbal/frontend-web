@@ -12,6 +12,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Encomienda, Ms3EncomiendasService } from '../../services/ms3-encomiendas.service';
+import { Ms3DatasetsService, Sucursal } from '../../services/ms3-datasets.service';
 
 const SERVICIOS = ['DOCUMENTO', 'PAQUETE_NORMAL', 'CARGA_PESADA', 'EXPRESS'];
 
@@ -70,8 +71,24 @@ const CLIENTES = gql`
               }
             </mat-select>
           </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Sucursal origen</mat-label>
+            <mat-select [(ngModel)]="form.sucursal_origen_id" (selectionChange)="onOrigenSel()">
+              @for (s of sucursales(); track s.id) {
+                <mat-option [value]="s.id">{{ s.ciudad }} — {{ s.nombre }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+          <mat-form-field appearance="outline">
+            <mat-label>Sucursal destino</mat-label>
+            <mat-select [(ngModel)]="form.sucursal_destino_id">
+              @for (s of sucursales(); track s.id) {
+                <mat-option [value]="s.id">{{ s.ciudad }} — {{ s.nombre }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
           <mat-form-field appearance="outline" class="col2">
-            <mat-label>Destino</mat-label>
+            <mat-label>Destino (dirección)</mat-label>
             <input matInput [(ngModel)]="form.destino" />
           </mat-form-field>
           <mat-form-field appearance="outline">
@@ -98,7 +115,12 @@ const CLIENTES = gql`
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close [disabled]="guardando()">Cancelar</button>
-      <button mat-raised-button color="primary" [disabled]="!form.cliente_id || guardando()" (click)="crear()">
+      <button
+        mat-raised-button
+        color="primary"
+        [disabled]="!form.cliente_id || !form.sucursal_origen_id || !form.sucursal_destino_id || guardando()"
+        (click)="crear()"
+      >
         <mat-icon>save</mat-icon> Registrar
       </button>
     </mat-dialog-actions>
@@ -118,6 +140,7 @@ const CLIENTES = gql`
 })
 export class EncomiendaFormDialog {
   private ms3 = inject(Ms3EncomiendasService);
+  private ds = inject(Ms3DatasetsService);
   private apollo = inject(Apollo);
   private ref = inject(MatDialogRef<EncomiendaFormDialog>);
   private router = inject(Router);
@@ -125,6 +148,7 @@ export class EncomiendaFormDialog {
 
   servicios = SERVICIOS;
   clientes = signal<ClienteOpt[]>([]);
+  sucursales = signal<Sucursal[]>([]);
   guardando = signal(false);
   form: Partial<Encomienda> = { servicio_ref: 'PAQUETE_NORMAL' };
 
@@ -133,11 +157,21 @@ export class EncomiendaFormDialog {
       next: (res) => this.clientes.set(res.data?.clientes ?? []),
       error: () => this.snack.open('No se pudieron cargar clientes (¿MS1 arriba?)', 'Cerrar', { duration: 3500 }),
     });
+    // Sucursales del MS3: nodos origen/destino -> el backend calcula la distancia real.
+    this.ds.sucursales().subscribe({
+      next: (s) => this.sucursales.set(s ?? []),
+      error: () => this.snack.open('No se pudieron cargar sucursales (¿MS3 arriba?)', 'Cerrar', { duration: 3500 }),
+    });
   }
 
   onClienteSel() {
     const c = this.clientes().find((x) => x.id === this.form.cliente_id);
     if (c?.direccion) this.form.destino = c.direccion;
+  }
+
+  onOrigenSel() {
+    const s = this.sucursales().find((x) => x.id === this.form.sucursal_origen_id);
+    if (s) this.form.origen = s.ciudad;
   }
 
   irAClientes() {
@@ -155,16 +189,27 @@ export class EncomiendaFormDialog {
       this.snack.open('El destino es obligatorio', 'Cerrar', { duration: 3000 });
       return;
     }
+    if (!this.form.sucursal_origen_id || !this.form.sucursal_destino_id) {
+      this.snack.open('Elegí sucursal origen y destino', 'Cerrar', { duration: 3000 });
+      return;
+    }
+    if (this.form.sucursal_origen_id === this.form.sucursal_destino_id) {
+      this.snack.open('Origen y destino deben ser sucursales distintas', 'Cerrar', { duration: 3000 });
+      return;
+    }
     this.guardando.set(true);
     const payload: Partial<Encomienda> = {
       cliente_id: c.id,
       cliente_nombre: c.nombre,
       cliente_direccion: c.direccion,
+      origen: this.form.origen,
       destino: this.form.destino,
       servicio_ref: this.form.servicio_ref,
       zona_ref: this.form.zona_ref,
       peso: this.form.peso,
       costo: this.form.costo,
+      sucursal_origen_id: this.form.sucursal_origen_id,
+      sucursal_destino_id: this.form.sucursal_destino_id,
     };
     this.ms3.crear(payload).subscribe({
       next: (e) => {
