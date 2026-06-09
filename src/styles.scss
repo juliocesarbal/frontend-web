@@ -1,0 +1,314 @@
+/* ===================================================================
+   Courier Inteligente — Tema "editorial cálido"
+   Paleta piedra/ámbar: ivory + carbón + gris cálido, acento ámbar tenue.
+   Tipografía: Fraunces (display) + Manrope (cuerpo).
+   Sin azules: se neutraliza el tema Material azure-blue a carbón/ámbar.
+   =================================================================== */
+:root {
+  --paper: #f4f1ea; /* fondo, ivory cálido */
+  --surface: #fffdf9; /* tarjetas, blanco cálido */
+  --surface-2: #faf6ee; /* zonas suaves */
+  --ink: #1c1917; /* casi negro cálido */
+  --ink-2: #44403c; /* texto secundario */
+  --muted: #837b70; /* gris cálido */
+  --line: #e7e1d5; /* bordes */
+  --line-2: #d9d2c4;
+  --accent: #a8682f; /* ámbar/terracota tenue */
+  --accent-soft: #f0e3d2;
+  --ok: #4d7c4a;
+  --warn: #b45309;
+  --bad: #a13b2f;
+  --radius: 14px;
+  --radius-sm: 10px;
+  --shadow: 0 1px 2px rgba(28, 25, 23, 0.04), 0 8px 24px -12px rgba(28, 25, 23, 0.18);
+}
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Manrope', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Tipografía display */
+h1,
+h2,
+h3,
+h4,
+.display {
+  font-family: 'Fraunces', Georgia, serif;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+}
+
+/* Material hereda Manrope */
+.mat-mdc-card,
+.mat-mdc-button,
+.mat-mdc-raised-button,
+.mat-mdc-stroked-button,
+.mat-mdc-unelevated-button,
+.mat-mdc-icon-button,
+.mat-mdc-form-field,
+.mdc-text-field,
+.mat-mdc-select,
+.mat-mdc-option,
+.mat-mdc-table,
+.mat-mdc-list-item,
+.mat-mdc-menu-item,
+.mat-mdc-dialog-container,
+.mat-expansion-panel,
+.mat-mdc-snack-bar-container,
+.mdc-label,
+.mat-mdc-tab {
+  font-family: 'Manrope', sans-serif !important;
+}
+
+.full-width {
+  width: 100%;
+}
+.spacer {
+  flex: 1 1 auto;
+}
+
+/* Layout de página */
+.page {
+  padding: 28px 28px 48px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+.page-head h2 {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 600;
+}
+.page-head .sub {
+  color: var(--muted);
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 16px;
+}
+.row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+}
+table {
+  width: 100%;
+}
+
+/* Tarjetas: borde fino + sombra suave */
+.mat-mdc-card {
+  border-radius: var(--radius) !important;
+  border: 1px solid var(--line);
+  background: var(--surface) !important;
+  box-shadow: var(--shadow) !important;
+  overflow: hidden;
+  padding: 6px;
+}
+.mat-mdc-card + .mat-mdc-card {
+  margin-top: 16px;
+}
+
+/* Tablas */
+.mat-mdc-table {
+  background: transparent !important;
+}
+.mat-mdc-header-row {
+  background: var(--surface-2);
+}
+.mat-mdc-header-cell {
+  color: var(--muted) !important;
+  font-weight: 700 !important;
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom-color: var(--line) !important;
+}
+.mat-mdc-cell {
+  border-bottom-color: var(--line) !important;
+  color: var(--ink-2);
+}
+.mat-mdc-row:hover {
+  background: var(--surface-2);
+}
+
+/* ===== Override del color primario Material (azul -> carbón/ámbar) ===== */
+.mat-mdc-raised-button.mat-primary,
+.mat-mdc-unelevated-button.mat-primary {
+  background-color: var(--ink) !important;
+  color: #fdfcf9 !important;
+  border-radius: 10px;
+}
+.mat-mdc-raised-button.mat-accent,
+.mat-mdc-unelevated-button.mat-accent {
+  background-color: var(--accent) !important;
+  color: #fff !important;
+  border-radius: 10px;
+}
+.mat-mdc-button.mat-primary,
+.mat-mdc-icon-button.mat-primary {
+  color: var(--ink) !important;
+}
+.mat-mdc-stroked-button {
+  border-radius: 10px !important;
+  border-color: var(--line-2) !important;
+  color: var(--ink) !important;
+}
+.mat-mdc-stroked-button:hover {
+  background: var(--surface-2) !important;
+}
+
+/* Form fields: foco en carbón, no azul */
+.mat-mdc-form-field.mat-focused .mdc-notched-outline > * {
+  border-color: var(--ink) !important;
+  border-width: 1.5px;
+}
+.mat-mdc-form-field.mat-focused .mat-mdc-floating-label,
+.mat-mdc-form-field.mat-focused .mdc-floating-label {
+  color: var(--ink) !important;
+}
+.mat-mdc-input-element {
+  caret-color: var(--ink) !important;
+}
+.mat-mdc-select-focused .mat-mdc-select-arrow {
+  color: var(--ink) !important;
+}
+
+/* Progress bar / spinner en carbón */
+.mat-mdc-progress-bar {
+  --mdc-linear-progress-active-indicator-color: var(--ink);
+  --mdc-linear-progress-track-color: var(--line);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+/* Badges / chips */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+.badge.green {
+  background: rgba(77, 124, 74, 0.12);
+  color: var(--ok);
+  border-color: transparent;
+}
+.badge.amber {
+  background: var(--accent-soft);
+  color: var(--accent);
+  border-color: transparent;
+}
+.badge.red {
+  background: rgba(161, 59, 47, 0.12);
+  color: var(--bad);
+  border-color: transparent;
+}
+
+/* Estados de encomienda */
+.estado {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+.estado-REGISTRADO {
+  background: var(--surface-2);
+  color: var(--ink-2);
+  border-color: var(--line-2);
+}
+.estado-EN_TRANSITO {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.estado-EN_REPARTO {
+  background: rgba(120, 53, 15, 0.1);
+  color: #92400e;
+}
+.estado-ENTREGADO {
+  background: rgba(77, 124, 74, 0.14);
+  color: var(--ok);
+}
+.estado-RETRASADO {
+  background: rgba(180, 83, 9, 0.14);
+  color: var(--warn);
+}
+.estado-CON_INCIDENCIA {
+  background: rgba(161, 59, 47, 0.13);
+  color: var(--bad);
+}
+
+/* Estado vacío */
+.empty {
+  padding: 48px 16px;
+  text-align: center;
+  color: var(--muted);
+}
+.empty mat-icon {
+  font-size: 46px;
+  height: 46px;
+  width: 46px;
+  opacity: 0.4;
+  margin-bottom: 10px;
+}
+.empty p {
+  margin: 0;
+}
+
+/* Diálogos */
+.mat-mdc-dialog-surface {
+  border-radius: 18px !important;
+  border: 1px solid var(--line);
+}
+.mat-mdc-dialog-container .mat-mdc-dialog-title {
+  font-family: 'Fraunces', Georgia, serif !important;
+}
+
+/* Scrollbar cálida */
+::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+::-webkit-scrollbar-thumb {
+  background: #d3cabb;
+  border-radius: 8px;
+  border: 3px solid var(--paper);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #c2b6a3;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
