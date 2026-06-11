@@ -77,4 +77,10 @@ export class Ms3EncomiendasService {
       params: { tracking: trk },
     });
   }
+
+  // QR de la guia (PNG). Se baja como blob con el JWT (lo agrega el interceptor)
+  // para mostrarlo/descargarlo/imprimirlo en la web.
+  qrPng(trk: string): Observable<Blob> {
+    return this.http.get(`${this.base}/encomiendas/${trk}/qr`, { responseType: 'blob' });
+  }
 }

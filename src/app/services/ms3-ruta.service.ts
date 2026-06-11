@@ -68,6 +68,31 @@ export interface RutaOsrm {
   fuente: 'OSRM' | 'HAVERSINE';
 }
 
+// --- Rutas asignadas a asesores (CU-08) ---
+export interface RutaEncomiendaResumen {
+  id: number;
+  tracking_code: string;
+  estado: string;
+  destino: string | null;
+}
+
+export interface Ruta {
+  id: number;
+  asesor_id: string;
+  zona_ref: string | null;
+  fecha: string | null;
+  estado: string; // PENDIENTE | EN_CURSO | COMPLETADA
+  created_at: string;
+  encomiendas: RutaEncomiendaResumen[];
+}
+
+export interface RutaCrearIn {
+  asesor_id: string;
+  zona_ref?: string | null;
+  fecha?: string | null;
+  encomienda_ids: number[];
+}
+
 // Cliente del análisis de ruta del MS3 (cruza ruta OSRM con zonas/incidentes/modelo).
 @Injectable({ providedIn: 'root' })
 export class Ms3RutaService {
@@ -83,5 +108,15 @@ export class Ms3RutaService {
     return this.http.get<RutaOsrm>(`${this.base}/ruta/osrm`, {
       params: { origen_id: origenId, destino_id: destinoId },
     });
+  }
+
+  // --- CRUD de rutas asignadas (CU-08) ---
+  listarRutas(asesorId?: string): Observable<Ruta[]> {
+    const params = asesorId ? { asesor_id: asesorId } : undefined;
+    return this.http.get<Ruta[]>(`${this.base}/rutas`, { params });
+  }
+
+  crearRuta(body: RutaCrearIn): Observable<Ruta> {
+    return this.http.post<Ruta>(`${this.base}/rutas`, body);
   }
 }

@@ -407,6 +407,8 @@ export class ShellComponent {
     { label: 'Servicios', icon: 'inventory_2', path: '/servicios' },
     { label: 'Calcular tarifa', icon: 'request_quote', path: '/tarifas' },
     { label: 'Encomiendas', icon: 'local_shipping', path: '/encomiendas' },
+    { label: 'Rutas', icon: 'add_road', path: '/rutas', soloAdmin: true },
+    { label: 'Notificaciones', icon: 'notifications', path: '/notificaciones' },
     { label: 'Documentos', icon: 'description', path: '/documentos' },
     { label: 'Auditoría', icon: 'history', path: '/auditoria', soloAdmin: true },
     {

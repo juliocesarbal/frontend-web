@@ -19,6 +19,7 @@ import {
   Ms3EncomiendasService,
 } from '../../services/ms3-encomiendas.service';
 import { EncomiendaFormDialog } from './encomienda-form.dialog';
+import { QrDialog } from './qr.dialog';
 
 const ETHERSCAN_TX = 'https://sepolia.etherscan.io/tx/';
 
@@ -101,6 +102,9 @@ const TRANSICIONES: Record<string, string[]> = {
             <td mat-cell *matCellDef="let e">
               <button mat-stroked-button (click)="verTrazabilidad(e)">
                 <mat-icon>account_tree</mat-icon> Trazabilidad
+              </button>
+              <button mat-stroked-button class="qr-btn" (click)="verQr(e)" title="Ver QR de la guía">
+                <mat-icon>qr_code_2</mat-icon> QR
               </button>
             </td>
           </ng-container>
@@ -191,6 +195,7 @@ const TRANSICIONES: Record<string, string[]> = {
   styles: [
     `
       .tabla-info { padding: 8px 4px; color: var(--muted); font-size: 13px; }
+      .qr-btn { margin-left: 8px; }
       .traza { margin-top: 16px; padding: 16px; }
       .traza-head { display: flex; align-items: center; justify-content: space-between; }
       .traza-head h3 { display: flex; align-items: center; gap: 8px; margin: 0; }
@@ -265,9 +270,14 @@ export class EncomiendasComponent {
       .subscribe((creada: Encomienda | undefined) => {
         if (creada) {
           this.cargar();
-          this.verTrazabilidad(creada);
+          // Muestra el QR recien generado para descargar/imprimir y pegar en el paquete.
+          this.verQr(creada);
         }
       });
+  }
+
+  verQr(e: Encomienda) {
+    this.dialog.open(QrDialog, { data: e, width: '360px', autoFocus: false });
   }
 
   verTrazabilidad(e: Encomienda) {

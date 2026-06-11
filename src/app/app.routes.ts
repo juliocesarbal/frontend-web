@@ -46,6 +46,19 @@ export const routes: Routes = [
           import('./features/documentos/documentos.component').then((m) => m.DocumentosComponent),
       },
       {
+        path: 'rutas',
+        canActivate: [adminGuard],
+        loadComponent: () =>
+          import('./features/rutas/rutas.component').then((m) => m.RutasComponent),
+      },
+      {
+        path: 'notificaciones',
+        loadComponent: () =>
+          import('./features/notificaciones/notificaciones.component').then(
+            (m) => m.NotificacionesComponent,
+          ),
+      },
+      {
         path: 'auditoria',
         canActivate: [adminGuard],
         loadComponent: () =>
