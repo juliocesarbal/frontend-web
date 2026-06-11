@@ -9,6 +9,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { AuthService } from '../../core/auth/auth.service';
 import { PerfilDialog } from './perfil.dialog';
+import { BiChatComponent } from '../reportes/bi-chat.component';
 
 interface SubItem {
   label: string;
@@ -36,6 +37,7 @@ interface NavItem {
     MatButtonModule,
     MatMenuModule,
     MatDialogModule,
+    BiChatComponent,
   ],
   template: `
     <mat-toolbar class="topbar">
@@ -107,6 +109,8 @@ interface NavItem {
         <router-outlet></router-outlet>
       </mat-sidenav-content>
     </mat-sidenav-container>
+
+    @if (auth.rol === 'ADMIN') { <app-bi-chat></app-bi-chat> }
   `,
   styles: [
     `
